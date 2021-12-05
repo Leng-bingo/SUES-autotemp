@@ -7,6 +7,7 @@
 python 版本`3.7.0`
 
 - **安装**
+
   `pip install -r requirements.txt`
 
 - **配置脚本**
@@ -20,6 +21,7 @@ sckey = "sckey"  # 非必填，Server酱推送提醒，需要填写sckey，官�
 ```
 
 - **运行**
+
   `python autotemp.py`
 
 # 其他说明
