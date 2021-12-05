@@ -280,4 +280,4 @@ if __name__ == '__main__':
     fail_num = 0
     valid = False
     while (not valid) and (fail_num < 4):
-        fail_num, vaild = main(fail_num)
+        fail_num, valid = main(fail_num)
