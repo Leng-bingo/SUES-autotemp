@@ -12,9 +12,7 @@ from requests.packages.urllib3.exceptions import \
 dict_text = []    # 创建一个空字典用于存储推送内容
 dict_state = []
 classnums = ['学号1', '学号2', '学号3']  # 填写学号
-passages = [
-    ('密码1'), ('密码2'), ('密码3')
-]
+passages = [('密码1'), ('密码2'), ('密码3')]
 sckey = "sckey"  # Server酱推送提醒，需要填写sckey，官网：https://sct.ftqq.com/sendkey
 # 由于云服务器时间有问题，所有在这里进行修正。具体根据服务器确定
 now = int(time.time())
@@ -35,8 +33,9 @@ def pr1(n):    # 打印函数，实现输出打印内容的同时追加字典
 
 
 def pushwechat(param):    # 推送函数
-    scurl = f"https://sctapi.ftqq.com/{sckey}.send"
-    requests.post(scurl, params=param)
+    if sckey != "sckey":
+        scurl = f"https://sctapi.ftqq.com/{sckey}.send"
+        requests.post(scurl, params=param)
 
 
 def getCap(session, reader):  # 识别验证码
