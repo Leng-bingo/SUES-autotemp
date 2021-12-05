@@ -89,8 +89,6 @@ def tianbao():
     n = "今天是" + time_tbsj
     pr1(n)  # 追加内容，日期
 
-    print(sdfgsd)
-
     requests.DEFAULT_RETRIES = 5
     s = requests.session()
     s.keep_alive = False
