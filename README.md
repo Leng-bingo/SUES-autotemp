@@ -21,3 +21,8 @@ sckey = "sckey"  # 非必填，Server酱推送提醒，需要填写sckey，官�
 
 - **运行**
   `python autotemp.py`
+
+# 其他说明
+
+源代码来自于网络，但是帖子已被删除，在其基础上更新了验证码识别功能。
+验证码识别功能参考自[sues-os](https://github.com/zsqw123/sues-os)
