@@ -2,10 +2,11 @@
 import random  # 生成随机数模块，生成随机体温
 import re
 import time  # 获取时间模块，可能需考虑时区
+from io import BytesIO
 
-import easyocr  # 验证码识别 ocr
 import requests  # 爬虫模块，本程序的根本
 from lxml import etree  # from…import   * 爬虫？还是数据解析来着，忘记了
+from PIL import Image
 from requests.packages.urllib3.exceptions import \
     InsecureRequestWarning  # 最后一行用于修复代理的问题，如果没有会报错。
 
@@ -18,12 +19,10 @@ sckey = "sckey"  # Server酱推送提醒，需要填写sckey，官网：https://
 now = int(time.time())
 timeArray = time.localtime(now)   # 转换为其他日期格式,如:"%Y-%m-%d %H:%M:%S"
 
-
 def rands():   # 随机数模块，实现范围内的随机体温，不建议修改此项
     temp = '{:.1f}'.format(random.uniform(35.9, 36.4))
     print("填报体温为:" + temp)
     return temp    # 相当于 赋值temp=rands（）
-
 
 def pr1(n):    # 打印函数，实现输出打印内容的同时追加字典
     get_dict0 = n
@@ -31,25 +30,58 @@ def pr1(n):    # 打印函数，实现输出打印内容的同时追加字典
     print(get_dict0)
     dict_text.append(get_dict1)
 
-
 def pushwechat(param):    # 推送函数
-    if sckey != "sckey":
-        scurl = f"https://sctapi.ftqq.com/{sckey}.send"
-        requests.post(scurl, params=param)
+    scurl = f"https://sctapi.ftqq.com/{sckey}.send"
+    requests.post(scurl, params=param)
 
+def 验证码识别(value):
+    im = Image.open(BytesIO(value)) # 将bytes数据转为图片
+    pix = im.load()
+    # 数字 0-9 对应二值化编码
+    numbers =[
+        "111000000011111110000000000011111001111111001111001111111110011100111111111001110011111111100111100111111100111110000000000011111110000000111111",
+        "111111111111111110011111111001111001111111100111000111111110011100000000000001110000000000000111111111111110011111111111111001111111111111100111",
+        "100111111100011100111111100001110011111100100111001111100110011100111100111001110011100111100111100000111110011111000111111001111111111111111111",
+        "100111111100111100111001111001110011100111100111001110011110011100111001111001110011000011000111100001000000111110001110000111111111111111111111",
+        "111111110011111111111100001111111111000000111111111000110011111110001111001111110000000000000111000000000000011111111111001111111111111100111111",
+        "000000011100111100000001111001110011100111100111001110011110011100111001111001110011110011000111001111000000111100111110000111111111111111111111",
+        "111100000011111111000000000011111000110011001111001110011110011100111001111001110011100111100111001110001100011110011100000011111111111000011111",
+        "111111111111111100111111111111110011111111100111001111111000011100111110000111110011100011111111001100111111111100000111111111110001111111111111",
+        "111111110001111110000110000011110000000011000111001100011110011100111001111001110011100011100111000000001100011110001110000011111111111100011111",
+        "110000111111111110000001110011110001100011100111001111001110011100111100111001110011110011100111100110011000111110000000000111111110000001111111"
+    ]
+    captcha = ""
+    num = 0
+    while num <4:
+        i = 13*num+7
+        ldString = ""
+        # 获取图片中所有数字的二值化编码
+        while i < 13*num+7+9:
+            j = 3
+            while j<19:
+                pixel = pix[i,j]
+                ldString = ldString + str((+(pixel[0] * 0.3 + pixel[1] * 0.59 + pixel[2] * 0.11 >= 128)))
+                j +=1
+            i+=1
+        comLen = []
+        # 获取编码对应数字
+        for i in range (len(numbers)):
+            temp = 0
+            for j in range(len(numbers[i])):
+                if numbers[i][j]==ldString[j]:
+                    temp +=1
+            comLen.append(temp)
+        captcha += str(comLen.index(max(comLen)))
+        num +=1
+    print("二值化识别验证码"+captcha)
+    return captcha
 
-def getCap(session, reader):  # 识别验证码
+def getCap(session):  # 获取验证码
     url = 'https://web-vpn.sues.edu.cn/https/77726476706e69737468656265737421f3f652d234256d43300d8db9d6562d/cas/captcha.jpg?vpn-1'
     resp = session.get(url=url)
-    result = reader.readtext(resp.content, detail=0)
-    if len(result) == 0:
-        return 0
-    if result[0].isdigit() and len(result[0]) == 4:
-        return result[0]
-    return 0
+    return 验证码识别(resp.content)
 
-
-def login(session, execution, Num, Pwd, reader):
+def login(session, execution, Num, Pwd):
     # 第二步：模拟登入网页VPN
     url2 = ("https://web-vpn.sues.edu.cn/https/77726476706e69737468656265737421f3f652d234256d43300d8db9d6562d/cas/"
             "login?service=https%3A%2F%2Fweb-vpn.sues.edu.cn%2Flogin%3Fcas_login%3Dtrue")
@@ -61,11 +93,8 @@ def login(session, execution, Num, Pwd, reader):
             "login?service=https%3A%2F%2Fweb-vpn.sues.edu.cn%2Flogin%3Fcas_login%3Dtrue")
     }
 
-    cap = getCap(session, reader)
-    print("验证码为" + str(cap))
-    if cap == 0:
-        print("正在刷新验证码")
-        return False
+    cap = getCap(session)
+    # print("验证码为" + str(cap))
     data2 = {
         "username": Num,
         "password": Pwd,
@@ -81,8 +110,6 @@ def login(session, execution, Num, Pwd, reader):
     z2 = session.post(url=url2, headers=headers2, data=data2,
                       verify=False, timeout=(3, 7))
     print("登陆成功")
-    return True
-
 
 def tianbao():
     time_tbsj = time.strftime("%Y-%m-%d %H:%M", timeArray)  # 输出：年-月-日，小时：分钟
@@ -105,33 +132,23 @@ def tianbao():
         tem_tj = rands()  # 要提交的体温值
 
         # 第一步：获取一个关键值execution，供登陆时使
-
         url1 = ("https://web-vpn.sues.edu.cn/https/77726476706e69737468656265737421f3f652d234256d43300d8db9d6562d/cas/"
                 "login?service=https%3A%2F%2Fweb-vpn.sues.edu.cn%2Flogin%3Fcas_login%3Dtrue")  # 登录网址  # 代码过长用（）连接
         z1 = requests.get(url1)
         z1.encoding = 'utf-8'
-        # print(z1.text)  # 打印网页源码，查看是否成功获取到界面
         content = etree.HTML(z1.text)  # 便于使用下面的Xpath
-        execution = content.xpath('//input[@name="execution"]/@value')[0]
-        # print("获得一个登录时需要的execution为:" + execution)  # 获得到需要的execution
+        execution = content.xpath('//input[@name="execution"]/@value')[0] # 用于登陆
 
         # 第二步：模拟登入网页VPN
         session = requests.session()  # 保持登录操作，懒得使用cookie了
-        reader = easyocr.Reader(['en'])
-
-        valid = False
-        j = 0
-        while (not valid) and (j < 15):
-            valid = login(session, execution,
-                          get_dict['username'], get_dict['password'], reader)
-            j += 1
-
-        # 获取验证码
+        login(session, execution,get_dict['username'], get_dict['password'])
+           
+        # 获取效验码
         url3 = ("https://web-vpn.sues.edu.cn/https/77726476706e69737468656265737421e7f8539"
                 "7213c6747301b9ca98b1b26312700d3d1/default/work/shgcd/jkxxcj/jkxxcj.jsp")
         z3 = session.post(url=url3, verify=False, timeout=(3, 7))
         searched = re.search(r'(?<=verification-code":").*(?="})', z3.text)
-        verifyCode = searched.group()
+        verifyCode = searched.group() # 用于提交体温
 
         # 第四步 获取变量数据（提交时间）同时判断当前时段
         time_tjsj1 = time.strftime("%Y-%m-%d %H:%M", timeArray)   #
@@ -256,8 +273,8 @@ def tianbao():
     pushwechat(param)
     return
 
-
 def main(fail_num):  # 体温填报的函数入口 上云的时候使用
+    
     fail_num += 1
     if fail_num <= 3:
         try:
@@ -281,3 +298,7 @@ if __name__ == '__main__':
     valid = False
     while (not valid) and (fail_num < 4):
         fail_num, valid = main(fail_num)
+
+
+
+
